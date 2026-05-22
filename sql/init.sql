@@ -2,7 +2,7 @@ pragma foreign_keys =on;
 
 -- 科目表
 create table if not exists subjects(
-    id int primary key autoincrement,
+    id integer primary key autoincrement,
     name text not null unique,
     weight real not null default 1.0,
     color text,
@@ -15,7 +15,7 @@ create table if not exists subjects(
 
 -- 计划表 总/年/月/日，树形结构
 create table if not exists plans(
-    id int primary key autoincrement,
+    id integer primary key autoincrement,
     parent_id int,
     plan_type text not null check(plan_type in ('total','month','week','day')),
     title text not null,
@@ -36,8 +36,8 @@ create table if not exists plans(
 -- 数据库性能优化
 
 -- 打卡记录表
-create table if not exists punch_recodes(
-    id int primary key autoincrement,
+create table if not exists punch_records(
+    id integer primary key autoincrement,
     punch_date text not null,--打卡日期，格式YYYY-MM-DD
     subject_id int not null,
     actual_minutes int not null default 0,
@@ -47,5 +47,40 @@ create table if not exists punch_recodes(
     updated_at text not null default(datetime('now','localtime')),
     foreign key (subject_id) references subjects(id) on delete restrict,-- 如果还有计划引用这个科目，就不许删除这个科目
     unique(punch_date,subject_id)-- 联合约束，打卡日期和打卡的科目不能相同
+);
 
-)
+-- 系统配置表 kv形式，灵活
+create table if not exists system_settings(
+    key text primary key,
+    value text not null,
+    updated_at text not null default (datetime('now','localtime'))
+);
+
+-- 操作日志表
+create table if not exists operation_logs(
+    id integer primary key autoincrement,
+    action text not null,-- create/update/delete/export/restore
+    entity_type text not null,-- subject/plan/punch/backup
+    entity_id int,
+    detail text, -- json字符串
+    created_at text not null default (datetime('now','localtime'))
+);
+
+-- 备份记录表
+create table if not exists backups(
+    id integer primary key autoincrement,
+    filename text not null,
+    file_path text not null,
+    file_size text not null,
+    backup_type text not null default 'manual'
+                                  check(backup_type in ('manual','auto')),
+    created_at text not null default (datetime('now','localtime'))
+);
+
+-- 默认配置
+insert or ignore into system_settings (key,value) values
+('exam_type','考研'),
+('exam_date','2026-5-20'),
+('makeup_limit','7'),
+('warning_threshold','60'),
+('daily_target_minutes','480')
