@@ -17,3 +17,5 @@ BACKUP_DIR=DATA_DIR / "backup"
 BACKUP_DIR.mkdir(exist_ok=True)
 
 EXPORT_DIR=DATA_DIR / "export"
+EXPORT_DIR.mkdir(exist_ok=True)
+
