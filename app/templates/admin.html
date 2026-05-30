@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}管理后台 - 备考打卡{% endblock %}
+{% block content %}
+{{ page_header('管理后台', '用户、全局配置与操作日志的统一管理入口') }}
+
+<ul class="nav nav-tabs admin-tabs mb-4" id="adminTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" role="tab">用户管理</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab">全局配置</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" role="tab">操作日志</button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- 用户管理 -->
+    <div class="tab-pane fade show active" id="users-pane" role="tabpanel">
+        <div class="table-responsive table-app">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th><th scope="col">用户名</th><th scope="col">角色</th><th scope="col">考试</th><th scope="col">目标日期</th>
+                        <th scope="col">状态</th><th scope="col" class="text-end">科目</th><th scope="col" class="text-end">打卡</th><th scope="col" class="text-end">计划</th><th scope="col">注册时间</th><th scope="col" class="text-end">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td class="num-cell text-muted">{{ u.id }}</td>
+                        <td><strong>{{ u.username }}</strong></td>
+                        <td><span class="badge-soft {% if u.role == 'admin' %}is-admin{% else %}is-user{% endif %}">{{ u.role }}</span></td>
+                        <td>{{ u.exam_type }}</td>
+                        <td class="small">{{ u.target_exam_date or '—' }}</td>
+                        <td><span class="badge-soft {% if u.is_active %}is-on{% else %}is-off{% endif %}">{{ '启用' if u.is_active else '禁用' }}</span></td>
+                        <td class="num-cell text-end">{{ u.subject_count }}</td>
+                        <td class="num-cell text-end">{{ u.punch_count }}</td>
+                        <td class="num-cell text-end">{{ u.plan_count }}</td>
+                        <td class="small text-muted">{{ u.created_at[:10] }}</td>
+                        <td class="text-end">
+                            {% if u.role != 'admin' %}
+                            <button class="btn btn-sm btn-outline-secondary toggle-active-btn" data-uid="{{ u.id }}" data-active="{{ u.is_active }}">
+                                {{ '禁用' if u.is_active else '启用' }}
+                            </button>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 全局配置 -->
+    <div class="tab-pane fade" id="settings-pane" role="tabpanel">
+        <form id="settingsForm" class="panel-form row g-3" style="max-width: 520px;">
+            <div class="col-12">
+                <label class="form-label">补卡时间窗口（天）</label>
+                <input type="number" class="form-control" name="makeup_limit" id="s_makeup_limit" min="1" max="30">
+            </div>
+            <div class="col-12">
+                <label class="form-label">每月补卡次数上限</label>
+                <input type="number" class="form-control" name="makeup_monthly_limit" id="s_makeup_monthly_limit" min="0" max="100">
+            </div>
+            <div class="col-12">
+                <label class="form-label">预警阈值（%）</label>
+                <input type="number" class="form-control" name="warning_threshold" id="s_warning_threshold" min="0" max="100">
+            </div>
+            <div class="col-12">
+                <label class="form-label">默认每日目标（分钟）</label>
+                <input type="number" class="form-control" name="daily_target_minutes" id="s_daily_target_minutes" min="0">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">保存配置</button>
+                <span id="settingsMsg" class="ms-2 small"></span>
+            </div>
+        </form>
+    </div>
+
+    <!-- 操作日志 -->
+    <div class="tab-pane fade" id="logs-pane" role="tabpanel">
+        <div class="mb-3">
+            <button class="btn btn-sm btn-outline-primary" id="refreshLogs">刷新日志</button>
+        </div>
+        <div class="table-responsive table-app">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th><th scope="col">时间</th><th scope="col">操作</th><th scope="col">类型</th><th scope="col">实体ID</th><th scope="col">操作人</th><th scope="col">被操作用户</th><th scope="col">详情</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody">
+                    <tr><td colspan="8" class="empty-state py-3">点击「刷新日志」加载记录</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 切换用户启用/禁用
+document.querySelectorAll(".toggle-active-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+        const uid = btn.dataset.uid;
+        const res = await fetch(`/admin/api/users/${uid}/toggle-active`, { method: "POST" });
+        if (res.ok) {
+            location.reload();
+        } else {
+            const data = await res.json();
+            alert(data.detail || "操作失败");
+        }
+    });
+});
+
+// 加载配置
+async function loadSettings() {
+    const res = await fetch("/admin/api/settings");
+    const data = await res.json();
+    Object.keys(data).forEach(k => {
+        const el = document.getElementById("s_" + k);
+        if (el) el.value = data[k];
+    });
+}
+loadSettings();
+
+// 保存配置
+document.getElementById("settingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const updates = {
+        makeup_limit: document.getElementById("s_makeup_limit").value,
+        makeup_monthly_limit: document.getElementById("s_makeup_monthly_limit").value,
+        warning_threshold: document.getElementById("s_warning_threshold").value,
+        daily_target_minutes: document.getElementById("s_daily_target_minutes").value,
+    };
+    const res = await fetch("/admin/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates }),
+    });
+    const msg = document.getElementById("settingsMsg");
+    if (res.ok) {
+        msg.textContent = "已保存";
+        msg.className = "ms-2 small text-success";
+    } else {
+        msg.textContent = "保存失败";
+        msg.className = "ms-2 small text-danger";
+    }
+});
+
+// 加载日志
+async function loadLogs() {
+    const res = await fetch("/admin/api/logs?limit=100");
+    const data = await res.json();
+    const tbody = document.getElementById("logsBody");
+    tbody.innerHTML = data.map(log => `
+        <tr>
+            <td>${log.id}</td>
+            <td class="small">${log.created_at}</td>
+            <td>${log.action}</td>
+            <td>${log.entity_type}</td>
+            <td>${log.entity_id || '-'}</td>
+            <td>${log.actor_id || '-'}</td>
+            <td>${log.target_user_id || '-'}</td>
+            <td class="small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;">${log.detail || '-'}</td>
+        </tr>
+    `).join("");
+}
+document.getElementById("refreshLogs").addEventListener("click", loadLogs);
+document.getElementById("logs-tab").addEventListener("click", loadLogs);
+</script>
+{% endblock %}

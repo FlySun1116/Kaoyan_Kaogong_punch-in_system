@@ -1,12 +1,52 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
 
 # Virtual Environment
 .venv/
+venv/
 
 # macOS
 .DS_Store
 
-# PyCharm
+# PyCharm / IDE
 .idea/
+.vscode/
+
+# Cursor local state (keep skills in repo)
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/SKILLS_README.md
+
+# 项目内部文档（不对外公开）
+PROJECT_BUILD.md
+IMPLEMENTATION_SPEC.md
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# 本地数据库与用户数据（含账号、打卡记录）
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# 备份与导出（可能含完整用户数据）
+data/backup/
+data/export/
+
+# 证书与密钥文件
+*.pem
+*.key
+*.p12
+
+# 日志与临时文件
+*.log
+*.tmp
+.cache/

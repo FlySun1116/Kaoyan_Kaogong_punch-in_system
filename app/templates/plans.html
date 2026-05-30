@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header, render_plan_tree %}
+{% block title %}计划管理{% endblock %}
+{% block content %}
+{{ page_header('计划管理', '总计划 → 月 → 周 → 日，层级拆解备考任务') }}
+
+<section class="panel-form" aria-labelledby="plan-form-title">
+    <h2 id="plan-form-title" class="h6 mb-3">新建计划</h2>
+    <form id="planForm" class="row g-3">
+        <div class="col-md-6 col-lg-2">
+            <label class="form-label" for="plan_type">类型</label>
+            <select class="form-select" id="plan_type" name="plan_type" required>
+                <option value="total">总计划</option>
+                <option value="month">月计划</option>
+                <option value="week">周计划</option>
+                <option value="day">日计划</option>
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <label class="form-label" for="title">标题</label>
+            <input class="form-control" id="title" name="title" placeholder="计划名称" required>
+        </div>
+        <div class="col-md-6 col-lg-2">
+            <label class="form-label" for="parent_id">父计划</label>
+            <select class="form-select" id="parent_id" name="parent_id">
+                <option value="">无（顶级）</option>
+                {% for p in plan_parents %}
+                <option value="{{ p.id }}">{{ p.title }} ({{ p.plan_type }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 col-lg-2">
+            <label class="form-label" for="subject_id">科目</label>
+            <select class="form-select" id="subject_id" name="subject_id">
+                <option value="">不限</option>
+                {% for s in subjects %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-lg-1">
+            <label class="form-label" for="target_minutes">目标(分)</label>
+            <input class="form-control" id="target_minutes" name="target_minutes" type="number" value="0" min="0">
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label" for="period_start">开始</label>
+            <input class="form-control" id="period_start" name="period_start" type="date" required>
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label" for="period_end">结束</label>
+            <input class="form-control" id="period_end" name="period_end" type="date" required>
+        </div>
+        <div class="col-12 col-lg-12 d-flex justify-content-end">
+            <button class="btn btn-primary px-4" type="submit">创建计划</button>
+        </div>
+    </form>
+</section>
+
+<section class="card-app">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">计划结构</h2>
+            <div class="btn-group btn-group-sm" role="group" aria-label="展开折叠">
+                <button class="btn btn-outline-secondary" type="button" id="expandAll">全部展开</button>
+                <button class="btn btn-outline-secondary" type="button" id="collapseAll">全部折叠</button>
+            </div>
+        </div>
+        <div id="planTree">
+            {{ render_plan_tree(plans_tree) }}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('planForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.parent_id = body.parent_id ? parseInt(body.parent_id) : null;
+    body.subject_id = body.subject_id ? parseInt(body.subject_id) : null;
+    body.target_minutes = parseInt(body.target_minutes || '0');
+    const res = await fetch('/api/plans', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (res.ok) {
+        showToast('计划已创建');
+        setTimeout(() => location.reload(), 600);
+    } else {
+        showToast(await parseError(res), true);
+    }
+});
+
+const planTree = document.getElementById('planTree');
+document.getElementById('expandAll')?.addEventListener('click', () => {
+    planTree.querySelectorAll('details.plan-node').forEach(d => d.open = true);
+});
+document.getElementById('collapseAll')?.addEventListener('click', () => {
+    planTree.querySelectorAll('details.plan-node').forEach(d => d.open = false);
+});
+</script>
+{% endblock %}

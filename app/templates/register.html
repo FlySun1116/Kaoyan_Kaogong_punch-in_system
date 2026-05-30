@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 考研考公学习打卡系统</title>
+    <link rel="icon" type="image/jpeg" href="/assets/images/Sun-_-.jpg">
+    <link rel="apple-touch-icon" href="/assets/images/Sun-_-.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body class="auth-page">
+<main class="auth-card">
+    <div class="auth-card__head">
+        <img src="/assets/images/Sun-_-.jpg" alt="备考打卡 Logo" class="auth-logo">
+        <span class="auth-brand">备考打卡</span>
+        <p class="auth-tagline">创建账号，定制你的备考计划</p>
+    </div>
+    <div class="auth-card__body">
+        <form id="registerForm" novalidate>
+            <div class="mb-3">
+                <label for="username" class="form-label">用户名</label>
+                <input type="text" class="form-control" id="username" required autocomplete="username">
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">密码</label>
+                <input type="password" class="form-control" id="password" required minlength="4" autocomplete="new-password">
+            </div>
+            <div class="mb-3">
+                <label for="examType" class="form-label">考试类型</label>
+                <select class="form-select" id="examType">
+                    <option value="考研">考研</option>
+                    <option value="考公">考公</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="targetDate" class="form-label">目标考试日期（可选）</label>
+                <input type="date" class="form-control" id="targetDate">
+            </div>
+            <div id="regError" class="alert alert-danger d-none py-2 small"></div>
+            <button type="submit" class="btn btn-primary w-100">注册</button>
+        </form>
+        <p class="auth-switch">
+            已有账号？<a href="/login">去登录</a>
+        </p>
+    </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const exam_type = document.getElementById("examType").value;
+    const target_exam_date = document.getElementById("targetDate").value || null;
+    const errEl = document.getElementById("regError");
+    errEl.classList.add("d-none");
+
+    if (password.length < 4) {
+        errEl.textContent = "密码至少4位";
+        errEl.classList.remove("d-none");
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, exam_type, target_exam_date }),
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            errEl.textContent = data.detail || "注册失败";
+            errEl.classList.remove("d-none");
+            return;
+        }
+        window.location.href = "/";
+    } catch (err) {
+        errEl.textContent = "网络错误，请重试";
+        errEl.classList.remove("d-none");
+    }
+});
+</script>
+</body>
+</html>

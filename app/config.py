@@ -1,6 +1,7 @@
 #配置文件
 #统一管理路径，后面所有文件都从这里读取配置
 
+import os
 from pathlib import Path
 #项目根目录
 BASE_DIR=Path(__file__).resolve().parent.parent
@@ -18,4 +19,7 @@ BACKUP_DIR.mkdir(exist_ok=True)
 
 EXPORT_DIR=DATA_DIR / "export"
 EXPORT_DIR.mkdir(exist_ok=True)
+
+# 会话密钥（从环境变量读取，缺省给开发用固定值）
+SECRET_KEY = os.getenv("SECRET_KEY", "kaoyan-kaogong-dev-secret-key-change-in-production")
 

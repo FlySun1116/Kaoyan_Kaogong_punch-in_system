@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}每日打卡{% endblock %}
+{% block content %}
+{{ page_header('每日打卡', '支持近 ' ~ makeup_limit ~ ' 天内补卡 · 同日同科自动合并') }}
+
+<section class="panel-form" aria-labelledby="punch-form-title">
+    <h2 id="punch-form-title" class="h6 mb-3">记录学习</h2>
+    <form id="punchForm" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label" for="punch_date">日期</label>
+            <input class="form-control" id="punch_date" name="punch_date" type="date" value="{{ today }}" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="subject_id">科目</label>
+            <select class="form-select" id="subject_id" name="subject_id" required>
+                <option value="">请选择</option>
+                {% for s in subjects %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="actual_minutes">时长（分钟）</label>
+            <input class="form-control" id="actual_minutes" name="actual_minutes" type="number" min="0" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="content">学习内容</label>
+            <input class="form-control" id="content" name="content" placeholder="今日学了什么">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button class="btn btn-success w-100" type="submit">打卡</button>
+        </div>
+    </form>
+</section>
+
+<h2 class="h5 mb-3">今日记录</h2>
+{% if records %}
+<div class="row g-3">
+    {% for r in records %}
+    <div class="col-md-6">
+        <div class="card-app punch-card {% if r.is_makeup %}is-makeup{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <strong>{{ subject_map.get(r.subject_id, '未知科目') }}</strong>
+                    {% if r.is_makeup %}
+                    <span class="badge text-bg-warning">补卡</span>
+                    {% else %}
+                    <span class="badge badge-status-ok">正常</span>
+                    {% endif %}
+                </div>
+                <p class="stat-value mb-1" style="font-size:1.5rem">{{ r.actual_minutes }} <span class="fs-6 text-muted">分钟</span></p>
+                <p class="mb-0 small text-muted">{{ r.content or '未填写学习内容' }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card-app">
+    <div class="card-body empty-state">
+        <div class="empty-state-icon">✏️</div>
+        <p class="mb-0">今天还没有打卡，开始记录吧</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('punchForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.subject_id = parseInt(body.subject_id);
+    body.actual_minutes = parseInt(body.actual_minutes);
+    const res = await fetch('/api/punches', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (res.ok) {
+        showToast('打卡成功');
+        setTimeout(() => location.reload(), 600);
+    } else {
+        showToast(await parseError(res), true);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}统计分析{% endblock %}
+{% block content %}
+{{ page_header('统计分析', '打卡率、学习趋势与科目汇总') }}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-5">
+        <div class="card-app h-100">
+            <div class="card-body ring-card">
+                <div class="stat-label">近 30 天打卡率</div>
+                <div class="ring-wrap">
+                    <canvas id="ringPunch"></canvas>
+                    <div class="ring-center"><span class="ring-pct" id="pctPunch">—</span></div>
+                </div>
+                <div class="stat-meta">{{ punch_rate.punched_days }} / {{ punch_rate.total_days }} 天有记录</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card-app h-100">
+            <div class="card-body">
+                <h2 class="h6 stat-label mb-2">近 14 天学习时长</h2>
+                <div class="trend-chart-wrap">
+                    <canvas id="trendChart" aria-label="学习时长折线图"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h5 mb-3">科目统计</h2>
+<div class="table-responsive table-app">
+    <table class="table table-striped mb-0">
+        <thead>
+        <tr>
+            <th scope="col">科目</th>
+            <th scope="col">累计</th>
+            <th scope="col">打卡天数</th>
+            <th scope="col">日均</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for s in subject_stats %}
+        <tr>
+            <td><strong>{{ s.subject_name }}</strong></td>
+            <td>{{ s.total_minutes }} 分钟</td>
+            <td>{{ s.punch_days }}</td>
+            <td>{{ s.avg_minutes_per_day }} 分钟</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted py-4">暂无统计数据</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const PUNCH_RATE = {{ punch_rate|tojson }};
+const TREND = {{ trend|tojson }};
+
+// 打卡率环形图
+(function () {
+    const rate = Math.min(PUNCH_RATE.punch_rate || 0, 100);
+    const color = rate >= 80 ? '#067647' : (rate >= 50 ? '#1e3a5f' : '#b54708');
+    document.getElementById('pctPunch').textContent = (PUNCH_RATE.punch_rate || 0) + '%';
+    new Chart(document.getElementById('ringPunch'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [rate, 100 - rate],
+                backgroundColor: [color, '#e8eef4'],
+                borderWidth: 0,
+                borderRadius: 6,
+            }],
+        },
+        options: {
+            cutout: '74%', responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true, duration: 700 },
+        },
+    });
+})();
+
+// 近 14 天学习时长折线图
+(function () {
+    const labels = TREND.map(d => d.date.slice(5));   // MM-DD
+    const data = TREND.map(d => d.minutes);
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: '学习时长(分钟)',
+                data,
+                borderColor: '#1e3a5f',
+                backgroundColor: 'rgba(30, 58, 95, 0.10)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#1e3a5f',
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (c) => `${c.parsed.y} 分钟` } },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#eef1f5' },
+                    ticks: { callback: (v) => v + 'm', color: '#5c6578', font: { size: 11 } },
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#5c6578', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+                },
+            },
+        },
+    });
+})();
+</script>
+{% endblock %}

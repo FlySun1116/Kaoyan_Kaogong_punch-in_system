@@ -1,0 +1,58 @@
+{% macro page_header(title, subtitle='') %}
+<header class="page-header">
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p class="lead">{{ subtitle }}</p>{% endif %}
+</header>
+{% endmacro %}
+
+{% macro progress_bar(rate, warning=false) %}
+<div class="progress-app" role="progressbar" aria-valuenow="{{ rate }}" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-app-bar {% if warning %}is-warning{% elif rate >= 80 %}is-success{% endif %}"
+         style="width: {{ [rate, 100]|min }}%"></div>
+</div>
+{% endmacro %}
+
+{% macro plan_row_inner(node) %}
+<span class="badge-type">{{ node.plan_type }}</span>
+<strong>{{ node.title }}</strong>
+<span class="text-muted small">{{ node.period_start }} — {{ node.period_end }}</span>
+{% if node.target_minutes %}
+<span class="badge bg-light text-dark">{{ node.target_minutes }} 分钟</span>
+{% endif %}
+{% if node.children %}
+<span class="badge plan-count">{{ node.children|length }} 项</span>
+{% endif %}
+<span class="badge {% if node.status == '已完成' %}badge-status-ok{% else %}badge-status-off{% endif %}">
+    {{ node.status }}
+</span>
+{% endmacro %}
+
+{% macro render_plan_tree(nodes) %}
+{% if nodes %}
+<ul class="plan-tree">
+    {% for node in nodes %}
+    <li class="plan-tree-item">
+        {% if node.children %}
+        <details class="plan-node"{% if node.plan_type != 'week' %} open{% endif %}>
+            <summary class="plan-tree-row">
+                <span class="plan-caret" aria-hidden="true">▸</span>
+                {{ plan_row_inner(node) }}
+            </summary>
+            {{ render_plan_tree(node.children) }}
+        </details>
+        {% else %}
+        <div class="plan-tree-row plan-tree-row--leaf">
+            <span class="plan-caret-spacer" aria-hidden="true"></span>
+            {{ plan_row_inner(node) }}
+        </div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📋</div>
+    <p>暂无计划，请先创建总计划</p>
+</div>
+{% endif %}
+{% endmacro %}

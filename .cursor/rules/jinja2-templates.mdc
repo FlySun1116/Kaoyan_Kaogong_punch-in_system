@@ -1,0 +1,57 @@
+---
+description: Jinja2 模板 + 静态资源最佳实践（改编自 awesome-cursorrules Shopify Liquid 规则）
+globs: ["app/templates/**/*.html", "app/templates/_macros.html", "app/templates/static/**"]
+alwaysApply: false
+---
+
+# Jinja2 模板与静态资源规范
+
+> 来源：[PatrickJS/awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) shopify-theme-dev-liquid · 已映射到 FastAPI + Jinja2 结构
+
+## Project Structure
+
+- **Templates**: `app/templates/*.html` — one page per route; shared layout in `base.html`.
+- **Macros**: reusable fragments in `_macros.html` (`page_header`, `render_plan_tree`, etc.).
+- **Static**: `app/templates/static/style.css` + `app.js` — no separate webpack/vite unless requested.
+- **Pages router**: `app/routers/pages.py` passes context; do not hardcode user-specific data in templates.
+
+## Jinja2 Templating
+
+- Use `{% extends "base.html" %}` and `{% block content %}` consistently.
+- Extract repeated UI into `{% macro %}` in `_macros.html`.
+- Keep complex logic in Python (services/pages.py); templates only display and light conditionals.
+- Use `{% for %}...{% else %}` for empty states, not blank tables.
+- Prefer `|tojson` filter when passing data to `<script>` blocks (Chart.js, etc.).
+
+## JavaScript in Templates
+
+- Page-specific scripts go in `{% block scripts %}` at bottom of template.
+- Shared helpers (`showToast`, `parseError`) live in `app.js`.
+- Use event listeners in script blocks, not inline handlers for new features.
+
+## CSS Styling
+
+- Use CSS variables defined in `:root` inside `style.css`.
+- Component classes: `.card-app`, `.panel-form`, `.table-app`, `.ring-card`, `.plan-tree`.
+- Responsive: Bootstrap breakpoints + `@media` for custom components.
+- Do not duplicate Bootstrap utilities in custom CSS unless overriding brand.
+
+## Performance
+
+- Minimize inline styles; prefer classes.
+- Chart.js loaded via CDN only on pages that need charts.
+- Avoid N+1 in templates — aggregate data in services before render.
+
+## Accessibility (A11y)
+
+- All interactive elements keyboard accessible.
+- Meaningful `alt` on images; `aria-label` on icon-only buttons.
+- Semantic HTML before ARIA.
+- Color contrast WCAG AA; status not color-only (use badges/text).
+- Visible focus states; respect `prefers-reduced-motion`.
+
+## Maintenance
+
+- Match existing naming and indentation in templates.
+- Do not break `fetch()` API paths or form field `name` attributes.
+- Test both logged-in and empty-data states when changing list/table templates.

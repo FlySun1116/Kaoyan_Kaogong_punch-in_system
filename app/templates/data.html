@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}数据管理{% endblock %}
+{% block content %}
+{{ page_header('数据管理', '导出学习数据、备份与恢复数据库') }}
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <button class="btn btn-primary" type="button" onclick="doExport()">导出 JSON</button>
+    <button class="btn btn-outline-primary" type="button" onclick="doBackup()">备份数据库</button>
+</div>
+
+<h2 class="h5 mb-3">备份记录</h2>
+<div class="table-responsive table-app mb-4">
+    <table class="table table-hover mb-0">
+        <thead>
+        <tr>
+            <th scope="col">文件名</th>
+            <th scope="col">大小</th>
+            <th scope="col">时间</th>
+            <th scope="col" class="text-end">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for b in backups %}
+        <tr>
+            <td><code class="small">{{ b.filename }}</code></td>
+            <td>{{ b.file_size }} B</td>
+            <td>{{ b.created_at }}</td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-danger-outline" type="button"
+                        onclick="restoreBackup({{ b.id }})">恢复此备份</button>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">
+                <div class="empty-state py-3">暂无备份，建议定期备份数据库</div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2 class="h5 mb-3">导出文件</h2>
+<ul class="list-group list-group-flush border rounded overflow-hidden">
+    {% for e in exports %}
+    <li class="list-group-item d-flex justify-content-between align-items-center bg-white">
+        <span><code class="small">{{ e.filename }}</code></span>
+        <span class="text-muted small">{{ e.file_size }} bytes</span>
+    </li>
+    {% else %}
+    <li class="list-group-item text-muted">暂无导出文件</li>
+    {% endfor %}
+</ul>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function doExport() {
+    const res = await fetch('/api/data/export', {method: 'POST'});
+    if (res.ok) {
+        showToast('导出成功');
+        setTimeout(() => location.reload(), 800);
+    } else showToast('导出失败', true);
+}
+async function doBackup() {
+    const res = await fetch('/api/data/backup', {method: 'POST'});
+    if (res.ok) {
+        showToast('备份成功');
+        setTimeout(() => location.reload(), 800);
+    } else showToast('备份失败', true);
+}
+async function restoreBackup(id) {
+    if (!confirm('确认从该备份恢复？当前数据将被覆盖，恢复后请重启服务。')) return;
+    const res = await fetch(`/api/data/restore/${id}`, {method: 'POST'});
+    if (res.ok) showToast('恢复成功，请重启 uvicorn');
+    else showToast('恢复失败', true);
+}
+</script>
+{% endblock %}

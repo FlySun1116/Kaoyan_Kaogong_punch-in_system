@@ -4,6 +4,9 @@ from app.models.punch_record import PunchRecord
 from app.models.system_setting import SystemSetting
 from app.models.operation_log import OperationLog
 from app.models.backup import Backup
+from app.models.user import User
+from app.models.subject_template import SubjectTemplate
+from app.models.makeup_usage import MakeupUsage
 
 #聚合导出
 __all__ = [
@@ -13,4 +16,7 @@ __all__ = [
     "SystemSetting",
     "OperationLog",
     "Backup",
+    "User",
+    "SubjectTemplate",
+    "MakeupUsage",
 ]

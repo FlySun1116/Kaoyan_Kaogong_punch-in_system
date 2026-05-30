@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}科目管理{% endblock %}
+{% block content %}
+{{ page_header('科目管理', '维护备考科目、权重与启用状态') }}
+
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-sm btn-outline-primary" id="syncTemplatesBtn" type="button">
+        📥 从模板导入科目
+    </button>
+</div>
+
+<section class="panel-form" aria-labelledby="subject-form-title">
+    <h2 id="subject-form-title" class="h6 mb-3">新增科目</h2>
+    <form id="subjectForm" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label" for="name">科目名称</label>
+            <input class="form-control" id="name" name="name" placeholder="如：行测" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="weight">权重</label>
+            <input class="form-control" id="weight" name="weight" type="number" step="0.1" value="1.0" min="0.1" max="10">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" for="colorTrigger">标识色</label>
+            <div class="color-picker" id="colorPicker">
+                <button class="form-control color-picker-trigger" type="button" id="colorTrigger"
+                        aria-haspopup="true" aria-expanded="false">
+                    <span class="color-picker-swatch" id="colorSwatch"></span>
+                    <span class="color-picker-value" id="colorValue">#457b9d</span>
+                    <span class="color-picker-caret" aria-hidden="true">▾</span>
+                </button>
+                <input type="hidden" id="color" name="color" value="#457b9d">
+                <div class="color-picker-pop" id="colorPop" aria-label="选择标识色" hidden>
+                    <p class="color-picker-heading">常用颜色</p>
+                    <div class="color-swatches" id="colorSwatches" role="listbox" aria-label="常用颜色"></div>
+                    <label class="color-custom">
+                        <span class="color-custom-label">自定义颜色</span>
+                        <input type="color" id="colorCustom" value="#457b9d" aria-label="自定义颜色">
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="description">备注</label>
+            <input class="form-control" id="description" name="description" placeholder="可选">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" type="submit">添加科目</button>
+        </div>
+    </form>
+</section>
+
+<div class="table-responsive table-app">
+    <table class="table table-hover mb-0">
+        <thead>
+        <tr>
+            <th scope="col">名称</th>
+            <th scope="col">权重</th>
+            <th scope="col">状态</th>
+            <th scope="col" class="text-end">操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for s in subjects %}
+        <tr>
+            <td>
+                {% if s.color %}
+                <span class="d-inline-block rounded-circle me-2 align-middle"
+                      style="width:10px;height:10px;background:{{ s.color }}"></span>
+                {% endif %}
+                <strong>{{ s.name }}</strong>
+            </td>
+            <td>{{ s.weight }}</td>
+            <td>
+                {% if s.is_activate %}
+                <span class="badge badge-status-ok">启用</span>
+                {% else %}
+                <span class="badge badge-status-off">停用</span>
+                {% endif %}
+            </td>
+            <td class="text-end">
+                {% if s.is_activate %}
+                <button class="btn btn-sm btn-danger-outline" type="button"
+                        onclick="deactivateSubject({{ s.id }})">停用</button>
+                {% else %}
+                <button class="btn btn-sm btn-outline-success" type="button"
+                        onclick="activateSubject({{ s.id }})">启用</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">
+                <div class="empty-state py-4">
+                    <div class="empty-state-icon">📚</div>
+                    <p class="mb-0">还没有科目，请先添加</p>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// —— 标识色拾色器 ——
+(function () {
+    const PRESETS = [
+        '#1e3a5f', '#457b9d', '#2a9d8f', '#e63946',
+        '#f4a261', '#e76f51', '#8338ec', '#264653',
+        '#06b6d4', '#b45309', '#7c3aed', '#0f766e'
+    ];
+    const picker = document.getElementById('colorPicker');
+    const trigger = document.getElementById('colorTrigger');
+    const pop = document.getElementById('colorPop');
+    const swatchesBox = document.getElementById('colorSwatches');
+    const hidden = document.getElementById('color');
+    const swatch = document.getElementById('colorSwatch');
+    const valueText = document.getElementById('colorValue');
+    const custom = document.getElementById('colorCustom');
+
+    function setColor(hex) {
+        hex = (hex || '').toLowerCase();
+        hidden.value = hex;
+        swatch.style.background = hex;
+        valueText.textContent = hex;
+        custom.value = hex;
+        swatchesBox.querySelectorAll('.color-swatch').forEach(el => {
+            el.classList.toggle('is-active', el.dataset.color === hex);
+        });
+    }
+
+    PRESETS.forEach(hex => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'color-swatch';
+        b.dataset.color = hex;
+        b.style.background = hex;
+        b.setAttribute('role', 'option');
+        b.setAttribute('aria-label', hex);
+        b.addEventListener('click', () => { setColor(hex); closePop(); });
+        swatchesBox.appendChild(b);
+    });
+
+    custom.addEventListener('input', () => setColor(custom.value));
+
+    function openPop() { pop.hidden = false; trigger.setAttribute('aria-expanded', 'true'); }
+    function closePop() { pop.hidden = true; trigger.setAttribute('aria-expanded', 'false'); }
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pop.hidden ? openPop() : closePop();
+    });
+    document.addEventListener('click', (e) => {
+        if (!picker.contains(e.target)) closePop();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePop();
+    });
+
+    setColor('#457b9d');
+})();
+
+document.getElementById('subjectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.weight = parseFloat(body.weight || '1');
+    if (!body.color) delete body.color;
+    if (!body.description) delete body.description;
+    const res = await fetch('/api/subjects', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (res.ok) {
+        showToast('科目已添加');
+        setTimeout(() => location.reload(), 600);
+    } else {
+        showToast(await parseError(res), true);
+    }
+});
+async function deactivateSubject(id) {
+    const res = await fetch(`/api/subjects/${id}`, {method: 'DELETE'});
+    if (res.ok) {
+        showToast('已停用');
+        setTimeout(() => location.reload(), 600);
+    } else showToast('操作失败', true);
+}
+async function activateSubject(id) {
+    const res = await fetch(`/api/subjects/${id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({is_activate: 1})
+    });
+    if (res.ok) {
+        showToast('已启用');
+        setTimeout(() => location.reload(), 600);
+    } else showToast('操作失败', true);
+}
+
+document.getElementById('syncTemplatesBtn').addEventListener('click', async () => {
+    const res = await fetch('/api/subjects/sync-templates', { method: 'POST' });
+    if (res.ok) {
+        showToast('已从模板导入科目');
+        setTimeout(() => location.reload(), 600);
+    } else {
+        showToast(await parseError(res), true);
+    }
+});
+</script>
+{% endblock %}

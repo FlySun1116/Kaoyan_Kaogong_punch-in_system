@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_macros.html" import page_header %}
+{% block title %}进度监控{% endblock %}
+{% block content %}
+{{ page_header('进度监控', '日 / 周 / 总体完成率与科目明细') }}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card-app h-100">
+            <div class="card-body ring-card">
+                <div class="stat-label">今日完成率</div>
+                <div class="ring-wrap">
+                    <canvas id="ringToday"></canvas>
+                    <div class="ring-center"><span class="ring-pct" id="pctToday">—</span></div>
+                </div>
+                <div class="stat-meta" id="metaToday"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-app h-100">
+            <div class="card-body ring-card">
+                <div class="stat-label">本周完成率</div>
+                <div class="ring-wrap">
+                    <canvas id="ringWeek"></canvas>
+                    <div class="ring-center"><span class="ring-pct" id="pctWeek">—</span></div>
+                </div>
+                <div class="stat-meta" id="metaWeek"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-app h-100">
+            <div class="card-body ring-card">
+                <div class="stat-label">总体完成率</div>
+                <div class="ring-wrap">
+                    <canvas id="ringTotal"></canvas>
+                    <div class="ring-center"><span class="ring-pct" id="pctTotal">—</span></div>
+                </div>
+                <div class="stat-meta" id="metaTotal"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h5 mb-3">科目进度</h2>
+<div class="table-responsive table-app">
+    <table class="table table-hover mb-0">
+        <thead>
+        <tr>
+            <th scope="col">科目</th>
+            <th scope="col">累计时长</th>
+            <th scope="col">打卡天数</th>
+            <th scope="col">日均时长</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for s in subject_stats %}
+        <tr>
+            <td><strong>{{ s.subject_name }}</strong></td>
+            <td>{{ s.total_minutes }} 分钟</td>
+            <td>{{ s.punch_days }} 天</td>
+            <td>{{ s.avg_minutes_per_day }} 分钟</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">
+                <div class="empty-state py-4">暂无科目学习数据</div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const OVERVIEW = {{ overview|tojson }};
+
+function ringColor(rate, warn) {
+    if (warn) return '#b54708';
+    if (rate >= 80) return '#067647';
+    return '#1e3a5f';
+}
+
+function makeRing(canvasId, pctId, metaId, seg, warn) {
+    const rate = seg.completion_rate;
+    const pctEl = document.getElementById(pctId);
+    const metaEl = document.getElementById(metaId);
+    const hasTarget = rate !== null && rate !== undefined;
+
+    pctEl.textContent = hasTarget ? rate + '%' : '—';
+    metaEl.textContent = hasTarget
+        ? `${seg.actual_minutes} / ${seg.target_minutes} 分钟`
+        : `${seg.actual_minutes} 分钟（未设目标）`;
+
+    const value = hasTarget ? Math.min(rate, 100) : 0;
+    const color = hasTarget ? ringColor(rate, warn) : '#cdd5e0';
+
+    new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [value, 100 - value],
+                backgroundColor: [color, '#e8eef4'],
+                borderWidth: 0,
+                borderRadius: 6,
+            }],
+        },
+        options: {
+            cutout: '74%',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true, duration: 700 },
+        },
+    });
+}
+
+makeRing('ringToday', 'pctToday', 'metaToday', OVERVIEW.today, OVERVIEW.warning);
+makeRing('ringWeek', 'pctWeek', 'metaWeek', OVERVIEW.week, false);
+makeRing('ringTotal', 'pctTotal', 'metaTotal', OVERVIEW.total, false);
+</script>
+{% endblock %}

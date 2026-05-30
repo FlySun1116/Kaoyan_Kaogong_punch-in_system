@@ -7,6 +7,9 @@ class Plan(Base):
     __tablename__ = 'plans'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), nullable=True
     )

@@ -7,10 +7,13 @@ from app.database import Base
 class PunchRecord(Base):
     __tablename__ = "punch_records"
     __table_args__ = (
-        UniqueConstraint("punch_date", "subject_id", name="uq_punch_date_subject"),
+        UniqueConstraint("user_id", "punch_date", "subject_id", name="uq_punch_user_date_subject"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     punch_date: Mapped[str] = mapped_column(nullable=False)
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("subjects.id", ondelete="RESTRICT"), nullable=False
